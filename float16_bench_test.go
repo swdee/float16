@@ -86,3 +86,102 @@ func BenchmarkString(b *testing.B) {
 	}
 	resultStr = result
 }
+
+func BenchmarkF16toF32LookupConversion(b *testing.B) {
+	// Load the buffer outside the loop to avoid reloading it during each iteration.
+	float16Buf := loadBuffer()
+
+	b.ResetTimer()
+
+	// Run the benchmark loop.
+	for i := 0; i < b.N; i++ {
+		float32Buf := make([]float32, len(float16Buf))
+
+		for i, val := range float16Buf {
+			float32Buf[i] = float16.FrombitstoF32(val)
+		}
+	}
+}
+
+func BenchmarkF16toF32NormalConversion(b *testing.B) {
+	// Load the buffer outside the loop to avoid reloading it during each iteration.
+	float16Buf := loadBuffer()
+
+	b.ResetTimer()
+
+	// Run the benchmark loop.
+	for i := 0; i < b.N; i++ {
+		float32Buf := make([]float32, len(float16Buf))
+
+		for i, val := range float16Buf {
+			f16 := float16.Frombits(val)
+			float32Buf[i] = f16.Float32()
+		}
+	}
+}
+
+func BenchmarkF16toF32CGOSingleConversion(b *testing.B) {
+	// Load the buffer outside the loop to avoid reloading it during each iteration.
+	float16Buf := loadBuffer()
+
+	b.ResetTimer()
+
+	// Run the benchmark loop.
+	for i := 0; i < b.N; i++ {
+		float32Buf := make([]float32, len(float16Buf))
+
+		for i, val := range float16Buf {
+			float32Buf[i] = float16.F16tof32single(val)
+		}
+	}
+}
+
+func BenchmarkF16toF32CGOVectorConversion(b *testing.B) {
+	// Load the buffer outside the loop to avoid reloading it during each iteration.
+	float16Buf := loadBuffer()
+
+	b.ResetTimer()
+
+	// Run the benchmark loop.
+	for i := 0; i < b.N; i++ {
+		float32Buf := make([]float32, len(float16Buf))
+
+		// Process the buffer in chunks of 8
+		for j := 0; j < len(float16Buf); j += 8 {
+
+			// Calculate how many elements are left to avoid out-of-bounds access
+			remaining := len(float16Buf) - j
+
+			if remaining >= 8 {
+				// Process 8 values at once if there are enough elements left
+				float16.F16tof32(
+					float16Buf[j],
+					float16Buf[j+1],
+					float16Buf[j+2],
+					float16Buf[j+3],
+					float16Buf[j+4],
+					float16Buf[j+5],
+					float16Buf[j+6],
+					float16Buf[j+7],
+					&float32Buf[j],
+					&float32Buf[j+1],
+					&float32Buf[j+2],
+					&float32Buf[j+3],
+					&float32Buf[j+4],
+					&float32Buf[j+5],
+					&float32Buf[j+6],
+					&float32Buf[j+7],
+				)
+
+			} else {
+				// process the remaining elements one by one
+				//
+				// NOTE: our float16Buf loaded does not result in this code
+				// being called
+				for k := 0; k < remaining; k++ {
+					float32Buf[j+k] = float16.F16tof32single(float16Buf[j+k])
+				}
+			}
+		}
+	}
+}

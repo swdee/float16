@@ -6,10 +6,14 @@ import (
 	"bytes"
 	"crypto/sha512"
 	"encoding/binary"
+	"encoding/gob"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"math"
+	"os"
 	"testing"
+	"time"
 
 	"github.com/x448/float16"
 )
@@ -801,4 +805,54 @@ func TestSmallestNonzero(t *testing.T) {
 	if float16.SmallestNonzero.Float32() != want {
 		t.Errorf("Invalid SmallestNonzero to float32 conversion: Float16=%s, wanted %g", float16.SmallestNonzero, want)
 	}
+}
+
+func TestF16toF32NormalConversion(t *testing.T) {
+
+	float16Buf := loadBuffer()
+
+	start := time.Now()
+
+	float32Buf := make([]float32, len(float16Buf))
+
+	for i, val := range float16Buf {
+		f16 := float16.Frombits(val)
+		float32Buf[i] = f16.Float32()
+	}
+
+	log.Printf("NORMAL exec time=%dms\n", time.Since(start).Milliseconds())
+}
+
+func TestF16toF32LookupConversion(t *testing.T) {
+
+	float16Buf := loadBuffer()
+
+	start := time.Now()
+
+	float32Buf := make([]float32, len(float16Buf))
+
+	for i, val := range float16Buf {
+		float32Buf[i] = float16.FrombitstoF32(val)
+	}
+
+	log.Printf("LOOKUP exec time=%dms\n", time.Since(start).Milliseconds())
+}
+
+func loadBuffer() []uint16 {
+	file, err := os.Open("buffer.gob")
+	if err != nil {
+		fmt.Println("Error opening file:", err)
+		return nil
+	}
+	defer file.Close()
+
+	var float16Buf []uint16
+	decoder := gob.NewDecoder(file)
+	err = decoder.Decode(&float16Buf)
+	if err != nil {
+		fmt.Println("Error decoding buffer:", err)
+		return nil
+	}
+
+	return float16Buf
 }

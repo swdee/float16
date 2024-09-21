@@ -11,6 +11,15 @@ import (
 	"strconv"
 )
 
+var lookupTable [65536]float32
+
+func init() {
+	for i := range lookupTable {
+		f16 := Frombits(uint16(i))
+		lookupTable[i] = f16.Float32()
+	}
+}
+
 // Float16 represents IEEE 754 half-precision floating-point numbers (binary16).
 type Float16 uint16
 
@@ -106,6 +115,10 @@ func PrecisionFromfloat32(f32 float32) Precision {
 // position. Frombits(Bits(x)) == x.
 func Frombits(u16 uint16) Float16 {
 	return Float16(u16)
+}
+
+func FrombitstoF32(u16 uint16) float32 {
+	return lookupTable[u16]
 }
 
 // Fromfloat32 returns a Float16 value converted from f32. Conversion uses
