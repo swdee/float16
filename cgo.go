@@ -35,6 +35,46 @@ void float16_to_float32_single(uint16_t a, float* res) {
     _Float16 tmp = *(_Float16*)&a;
     *res = (float)tmp;
 }
+
+void float16_to_float32_buffer(const uint16_t* input, float* output, size_t count) {
+    for (size_t i = 0; i < count; i++) {
+        _Float16 tmp = *(_Float16*)&input[i];
+        output[i] = (float)tmp;
+    }
+}
+
+void float16_to_float32_vector_buffer(const uint16_t* input, float* output, size_t count) {
+    // Process in chunks of 8
+    for (size_t i = 0; i < count; i += 8) {
+        if (i + 8 <= count) {
+            // Process 8 elements in one go
+            _Float16 tmp_a = *(_Float16*)&input[i];
+            _Float16 tmp_b = *(_Float16*)&input[i + 1];
+            _Float16 tmp_c = *(_Float16*)&input[i + 2];
+            _Float16 tmp_d = *(_Float16*)&input[i + 3];
+            _Float16 tmp_e = *(_Float16*)&input[i + 4];
+            _Float16 tmp_f = *(_Float16*)&input[i + 5];
+            _Float16 tmp_g = *(_Float16*)&input[i + 6];
+            _Float16 tmp_h = *(_Float16*)&input[i + 7];
+            output[i] = (float)tmp_a;
+            output[i + 1] = (float)tmp_b;
+            output[i + 2] = (float)tmp_c;
+            output[i + 3] = (float)tmp_d;
+            output[i + 4] = (float)tmp_e;
+            output[i + 5] = (float)tmp_f;
+            output[i + 6] = (float)tmp_g;
+            output[i + 7] = (float)tmp_h;
+        } else {
+            // Process remaining elements one by one
+            for (size_t j = i; j < count; j++) {
+                _Float16 tmp = *(_Float16*)&input[j];
+                output[j] = (float)tmp;
+            }
+        }
+    }
+}
+
+
 */
 import "C"
 import "unsafe"
@@ -56,4 +96,21 @@ func F16tof32single(a uint16) float32 {
 	var res float32
 	C.float16_to_float32_single(C.uint16_t(a), (*C.float)(unsafe.Pointer(&res)))
 	return res
+}
+
+// F16toF32Buffer converts an entire float16 buffer to float32 buffer
+func F16toF32BufferSingle(float16Buf []uint16, float32Buf []float32) {
+	C.float16_to_float32_buffer(
+		(*C.uint16_t)(unsafe.Pointer(&float16Buf[0])), // Pointer to the input buffer
+		(*C.float)(unsafe.Pointer(&float32Buf[0])),    // Pointer to the output buffer
+		C.size_t(len(float16Buf)),                     // Number of elements to convert
+	)
+}
+
+func F16toF32BufferVector(float16Buf []uint16, float32Buf []float32) {
+	C.float16_to_float32_vector_buffer(
+		(*C.uint16_t)(unsafe.Pointer(&float16Buf[0])), // Pointer to the input buffer
+		(*C.float)(unsafe.Pointer(&float32Buf[0])),    // Pointer to the output buffer
+		C.size_t(len(float16Buf)),                     // Number of elements to convert
+	)
 }

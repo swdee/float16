@@ -185,3 +185,31 @@ func BenchmarkF16toF32CGOVectorConversion(b *testing.B) {
 		}
 	}
 }
+
+func BenchmarkF16toF32CGOBufferSingleConversion(b *testing.B) {
+	// Load the buffer outside the loop to avoid reloading it during each iteration.
+	float16Buf := loadBuffer()
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		float32Buf := make([]float32, len(float16Buf))
+
+		// Make a single CGO call to process the entire buffer
+		float16.F16toF32BufferSingle(float16Buf, float32Buf)
+	}
+}
+
+func BenchmarkF16toF32CGOBufferVectorConversion(b *testing.B) {
+	// Load the buffer outside the loop to avoid reloading it during each iteration.
+	float16Buf := loadBuffer()
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		float32Buf := make([]float32, len(float16Buf))
+
+		// Make a single CGO call to process the entire buffer
+		float16.F16toF32BufferVector(float16Buf, float32Buf)
+	}
+}
